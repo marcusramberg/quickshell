@@ -25,6 +25,7 @@ public slots:
 
 private slots:
 	void onQScreenAdded(QScreen* screen);
+	void onQScreenRemoved(QScreen* screen);
 
 private:
 	QList<QScreen*> mScreens;

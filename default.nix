@@ -24,16 +24,24 @@
   polkit,
   glib,
 
-  gitRev ? (let
-    headExists = builtins.pathExists ./.git/HEAD;
-    headContent = builtins.readFile ./.git/HEAD;
-  in if headExists
-     then (let
-       matches = builtins.match "ref: refs/heads/(.*)\n" headContent;
-     in if matches != null
-        then builtins.readFile ./.git/refs/heads/${builtins.elemAt matches 0}
-        else headContent)
-     else "unknown"),
+  gitRev ? (
+    let
+      headExists = builtins.pathExists ./.git/HEAD;
+      headContent = builtins.readFile ./.git/HEAD;
+    in
+    if headExists then
+      (
+        let
+          matches = builtins.match "ref: refs/heads/(.*)\n" headContent;
+        in
+        if matches != null then
+          builtins.readFile ./.git/refs/heads/${builtins.elemAt matches 0}
+        else
+          headContent
+      )
+    else
+      "unknown"
+  ),
 
   debug ? false,
   withCrashReporter ? true,
@@ -46,10 +54,11 @@
   withHyprland ? true,
   withI3 ? true,
   withPolkit ? true,
-}: let
+}:
+let
   unwrapped = stdenv.mkDerivation {
     pname = "quickshell${lib.optionalString debug "-debug"}";
-    version = "0.2.1";
+    version = "0.2.1-dev";
     src = nix-gitignore.gitignoreSource "/default.nix\n" ./.;
 
     dontWrapQtApps = true; # see wrappers
@@ -60,7 +69,9 @@
       spirv-tools
       pkg-config
     ]
-    ++ lib.optional (withWayland && lib.strings.compareVersions qt6.qtbase.version "6.10.0" == -1) qt6.qtwayland
+    ++ lib.optional (
+      withWayland && lib.strings.compareVersions qt6.qtbase.version "6.10.0" == -1
+    ) qt6.qtwayland
     ++ lib.optionals withWayland [
       qt6.qtwayland # qtwaylandscanner required at build time
       wayland-scanner
@@ -74,13 +85,24 @@
     ++ lib.optional withQtSvg qt6.qtsvg
     ++ lib.optional withCrashReporter breakpad
     ++ lib.optional withJemalloc jemalloc
-    ++ lib.optional (withWayland && lib.strings.compareVersions qt6.qtbase.version "6.10.0" == -1) qt6.qtwayland
-    ++ lib.optionals withWayland [ wayland wayland-protocols ]
-    ++ lib.optionals (withWayland && libgbm != null) [ libdrm libgbm ]
+    ++ lib.optional (
+      withWayland && lib.strings.compareVersions qt6.qtbase.version "6.10.0" == -1
+    ) qt6.qtwayland
+    ++ lib.optionals withWayland [
+      wayland
+      wayland-protocols
+    ]
+    ++ lib.optionals (withWayland && libgbm != null) [
+      libdrm
+      libgbm
+    ]
     ++ lib.optional withX11 xorg.libxcb
     ++ lib.optional withPam pam
     ++ lib.optional withPipewire pipewire
-    ++ lib.optionals withPolkit [ polkit glib ];
+    ++ lib.optionals withPolkit [
+      polkit
+      glib
+    ];
 
     cmakeBuildType = if debug then "Debug" else "RelWithDebInfo";
 
@@ -133,9 +155,12 @@
 
     passthru = {
       unwrapped = unwrapped;
-      withModules = modules: wrapper.overrideAttrs (prev: {
-        buildInputs = prev.buildInputs ++ modules;
-      });
+      withModules =
+        modules:
+        wrapper.overrideAttrs (prev: {
+          buildInputs = prev.buildInputs ++ modules;
+        });
     };
   };
-in wrapper
+in
+wrapper
